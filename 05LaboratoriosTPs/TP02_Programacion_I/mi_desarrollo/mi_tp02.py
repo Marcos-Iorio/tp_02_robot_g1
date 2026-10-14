@@ -39,8 +39,45 @@ def comando_es_valido(comando):
       - que velocidad y tiempo sean numeros de verdad, no textos
       - que el tiempo no sea negativo
     """
-    # TU CODIGO ACA
-    pass
+    try:
+        if len(comando) == 0:
+            return False
+        nombre = comando[0]
+        if nombre in ("detenerse", "saludar"):
+            return len(comando) == 1
+        if nombre in ("avanzar", "girar"):
+            if len(comando) != 3:
+                return False
+            velocidad, tiempo = comando[1], comando[2]
+            float(velocidad)
+            return float(tiempo) >= 0
+        return False
+    except (TypeError, ValueError):
+        return False
+
+
+def motivo_invalido(comando):
+    """Explica en un texto por que un comando no es valido."""
+    try:
+        if len(comando) == 0:
+            return "comando vacio"
+        nombre = comando[0]
+        if nombre in ("detenerse", "saludar"):
+            return f"'{nombre}' no lleva datos"
+        if nombre not in ("avanzar", "girar"):
+            return f"el comando '{nombre}' no existe"
+        if len(comando) != 3:
+            return f"'{nombre}' necesita velocidad y tiempo ({len(comando) - 1} datos recibidos)"
+        for etiqueta, valor in (("velocidad", comando[1]), ("tiempo", comando[2])):
+            try:
+                float(valor)
+            except (TypeError, ValueError):
+                return f"la {etiqueta} tiene que ser un numero"
+        if float(comando[2]) < 0:
+            return "el tiempo no puede ser negativo"
+    except TypeError:
+        return "el comando no es una tupla valida"
+    return "comando invalido"
 
 
 # =====================================================================
@@ -60,8 +97,18 @@ def ejecutar_comando(robot, comando):
     igual (por ejemplo, si la velocidad supera el limite de la materia).
     Eso llega como un ErrorDeSeguridad y conviene atraparlo.
     """
-    # TU CODIGO ACA
-    pass
+    nombre = comando[0]
+    if nombre == "avanzar":
+        robot.avanzar(velocidad=float(comando[1]), tiempo=float(comando[2]))
+        return f"avanzo a {comando[1]} m/s durante {comando[2]} s"
+    if nombre == "girar":
+        robot.girar(velocidad=float(comando[1]), tiempo=float(comando[2]))
+        return f"giro a {comando[1]} rad/s durante {comando[2]} s"
+    if nombre == "detenerse":
+        robot.detenerse()
+        return "se detuvo"
+    robot.saludar()
+    return "saludo"
 
 
 # =====================================================================
@@ -77,8 +124,25 @@ def ejecutar_mision(robot, mision, historial):
 
     Un comando invalido NO tiene que cortar la mision.
     """
-    # TU CODIGO ACA
-    pass
+
+    for comando in mision:
+        if not comando_es_valido(comando):
+            historial.append(
+                {"comando": comando, "ok": False, "motivo": motivo_invalido(comando)})
+            continue
+        try:
+            resultado = ejecutar_comando(robot, comando)
+            historial.append({"comando": comando, "ok": True, "motivo": resultado})
+        except ErrorDeSeguridad as error:
+            historial.append({"comando": comando, "ok": False, "motivo": f"rechazado por seguridad: {error}"})
+        except NotImplementedError as error:
+            historial.append(
+                {"comando": comando, "ok": False,
+                 "motivo": f"el robot no soporta el comando: {error}"})
+        except Exception as error:
+            historial.append(
+                {"comando": comando, "ok": False,
+                 "motivo": f"error inesperado: {error}"})
 
 
 # =====================================================================
@@ -92,8 +156,20 @@ def generar_reporte(historial):
       - cuantos se rechazaron
       - cual fue el motivo de cada rechazo
     """
-    # TU CODIGO ACA
-    pass
+    ok = [h for h in historial if h["ok"]]
+    rechazados = [h for h in historial if not h["ok"]]
+
+    print("=" * 50)
+    print("REPORTE DE LA MISION")
+    print("=" * 50)
+    print(f"Comandos ejecutados correctamente: {len(ok)}")
+    print(f"Comandos rechazados:      {len(rechazados)}")
+    if rechazados:
+        print("-" * 50)
+        print("Motivos de rechazo:")
+        for h in rechazados:
+            print(f"  {h['comando']} -> {h['motivo']}")
+    print("=" * 50)
 
 
 # =====================================================================
@@ -109,7 +185,7 @@ def main():
         # Empeza probando con MISION_BASICA.
         # Cuando funcione, proba con MISION_CON_ERRORES: esa tiene
         # comandos invalidos a proposito.
-        ejecutar_mision(robot, MISION_BASICA, historial)
+        ejecutar_mision(robot, MISION_CON_ERRORES, historial)
         generar_reporte(historial)
     finally:
         robot.detenerse()
