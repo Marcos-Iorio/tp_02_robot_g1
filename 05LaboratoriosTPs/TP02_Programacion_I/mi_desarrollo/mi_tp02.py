@@ -163,7 +163,7 @@ def generar_reporte(historial):
     print("REPORTE DE LA MISION")
     print("=" * 50)
     print(f"Comandos ejecutados correctamente: {len(ok)}")
-    print(f"Comandos rechazados:      {len(rechazados)}")
+    print(f"Comandos rechazados: {len(rechazados)}")
     if rechazados:
         print("-" * 50)
         print("Motivos de rechazo:")
@@ -182,10 +182,23 @@ def main():
     historial = []
 
     try:
-        # Empeza probando con MISION_BASICA.
-        # Cuando funcione, proba con MISION_CON_ERRORES: esa tiene
-        # comandos invalidos a proposito.
-        ejecutar_mision(robot, MISION_CON_ERRORES, historial)
+        misiones = {
+            "1": ("Mision basica", MISION_BASICA),
+            "2": ("Mision con errores", MISION_CON_ERRORES),
+            "3": ("Mision cuadrado", MISION_CUADRADO),
+        }
+
+        print("Misiones disponibles:")
+        for opcion, (nombre, _) in misiones.items():
+            print(f"  {opcion}. {nombre}")
+
+        eleccion = input("Elegi una mision: ").strip()
+        while eleccion not in misiones:
+            eleccion = input("Opcion invalida. Elegi 1, 2 o 3: ").strip()
+
+        nombre, mision = misiones[eleccion]
+        print(f"Ejecutando: {nombre}")
+        ejecutar_mision(robot, mision, historial)
         generar_reporte(historial)
     finally:
         robot.detenerse()
